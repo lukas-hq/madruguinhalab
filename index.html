@@ -894,11 +894,15 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
         });
         
         // === CÓDIGO DE CONEXÃO E LOGIN (SUPABASE) ===
+  // === CÓDIGO DE CONEXÃO E LOGIN (SUPABASE) ===
         try {
             const supabase = window.supabase.createClient(
-              'https://ucjemvzcbnbcgoshgnpr.supabase.co', 
+              'https://ucjemvzcbnbcqoshqnpr.supabase.co', 
               'sb_publishable_0pvUyBZ4r6PIZXtoOirl7A_MR7Ofe6W' 
             );
+
+            // DESTRAVA O SALVAMENTO
+            COL = true; 
 
             async function pullData() {
               const { data, error } = await supabase.from('calc_dados').select('payload').eq('id', 'farm_data').single();
@@ -980,6 +984,20 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
                 btnLogin.textContent = 'Entrar';
               }
             };
+
+            // === PATCH DE SINCRONIZAÇÃO INTELIGENTE ===
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden && document.getElementById('login-screen').style.display === 'none') {
+                pullData();
+              }
+            });
+
+            document.getElementById('sy').addEventListener('click', async (e) => {
+              e.stopPropagation();
+              badge('Baixando dados...');
+              await pullData();
+              badge('☁ Sincronizado');
+            }, true);
 
             checkLogin();
         } catch (geral) {
