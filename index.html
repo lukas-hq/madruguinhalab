@@ -896,11 +896,10 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
         // === CÓDIGO DE CONEXÃO E LOGIN (SUPABASE) ===
   // === CÓDIGO DE CONEXÃO E LOGIN (SUPABASE) ===
         try {
-            const supabase = window.supabase.createClient(
+const supabase = window.supabase.createClient(
               'https://ucjemvzcbnbcqoshqnpr.supabase.co', 
               'sb_publishable_0pvUyBZ4r6PIZXtoOirl7A_MR7Ofe6W' 
             );
-
             // DESTRAVA O SALVAMENTO
             COL = true; 
 
