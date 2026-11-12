@@ -106,19 +106,31 @@
     </style>
 </head>
 <body>
+    
     <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;">
-  <div class="card" style="width:100%;max-width:360px;padding:24px;">
-    <h2 style="margin-bottom:16px;text-align:center;">Acesso Restrito</h2>
-    <label>E-mail<input type="email" id="login-email"></label>
-    <label style="margin-top:12px;">Senha<input type="password" id="login-pwd"></label>
-    <button class="pri" id="btn-login" style="width:100%;margin-top:20px;padding:14px;">Entrar</button>
-    <div id="login-err" style="color:var(--bad);margin-top:12px;font-size:12px;text-align:center;"></div>
-  </div>
-</div>
+        <div class="card" style="width:100%;max-width:320px;padding:32px 24px;">
+            <div class="lg" style="margin-bottom:24px;border:0;padding:0;align-items:center;">
+                <b style="font-size:32px;">Calc3D</b>
+                <small style="font-size:12px;">ACESSO RESTRITO</small>
+            </div>
+            <label style="margin-bottom:12px">E-mail corporativo<input type="email" id="login-email"></label>
+            <label>Senha de acesso<input type="password" id="login-pwd"></label>
+            <button class="pri" id="btn-login" style="width:100%;margin-top:24px;padding:12px;">Acessar Sistema</button>
+            <div id="login-err" style="color:var(--bad);margin-top:16px;font-size:13px;text-align:center;font-weight:700;"></div>
+        </div>
+    </div>
+
     <header>
         <div class="lg"><b>Calc3D</b><small>SLICER EDITION</small></div>
-        <button class="tab on" data-t="calc">Calc</button><button class="tab" data-t="hist">Histórico</button><button class="tab" data-t="est">Estoque</button><button class="tab" data-t="set">Ajustes</button>
-        <span class="sp0"></span><span id="sy" data-a="sync" class="mu sm" style="white-space:nowrap;cursor:pointer" title="Clique para atualizar da nuvem"></span><button id="th" title="Alternar tema">◐</button><select id="cs" data-s="cur" style="width:auto;margin:0;padding:8px 10px"><option>BRL</option><option>USD</option><option>EUR</option></select>
+        <button class="tab on" data-t="calc">Calc</button>
+        <button class="tab" data-t="hist">Histórico</button>
+        <button class="tab" data-t="est">Estoque</button>
+        <button class="tab" data-t="set">Ajustes</button>
+        <span class="sp0"></span>
+        <span id="sy" data-a="sync" class="mu sm" style="white-space:nowrap;cursor:pointer" title="Sincronizar dados"></span>
+        <button id="th" title="Alternar tema">◐</button>
+        <select id="cs" data-s="cur" style="width:auto;margin:0;padding:8px 10px"><option>BRL</option><option>USD</option><option>EUR</option></select>
+        <button class="dg" id="btn-logout" title="Sair da conta" style="padding:8px 10px; margin-left: 6px;">✕ Sair</button>
     </header>
     <main>
         <section class="v on" id="v-calc"></section>
@@ -129,7 +141,6 @@
     <dialog id="dlg"></dialog>
     <dialog id="cf"></dialog>
     <div id="toast"></div>
-    
     <script>
         const $ = s => document.querySelector(s), uid = () => Math.random().toString(36).slice(2, 9);
         const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -146,9 +157,7 @@
         const ask = (m, cb) => { const d = $('#cf'); d.innerHTML = `<p style="margin:0 0 16px;font-size:16px">${esc(m)}</p><div class="row r"><button id="cn">Cancelar</button><button class="dg" id="ok2">Confirmar</button></div>`; $('#cn').onclick = () => d.close(); $('#ok2').onclick = () => { d.close(); cb() }; d.showModal() };
         const shrink = u => new Promise(r => { const i = new Image(); i.onload = () => { const k = Math.min(1, 720 / Math.max(i.width, i.height)), c = document.createElement('canvas'); c.width = i.width * k; c.height = i.height * k; c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); let q = .68, o = c.toDataURL('image/jpeg', q); while (o.length > 170000 && q > .3) { q -= .1; o = c.toDataURL('image/jpeg', q) } r(o) }; i.onerror = () => r(u); i.src = u });
         function flat() { const o = { settings: Object.assign({ k: 'settings' }, S.set) }; KS.forEach(k => S[k].forEach((r, i) => { if (!r.ts) r.ts = Date.now() + i; o[k + '_' + r.id] = Object.assign({ k }, r) })); return o }
-        
         function push() { if (!COL) return; dirty = true; clearTimeout(ptm); ptm = setTimeout(run, 500) }
-        
         function adopt(o) {
             const n = { set: Object.assign({}, D0.set, o.settings || {}), machines: [], spools: [], items: [], hist: [] }; delete n.set.k;
             for (const id in o) { const r = Object.assign({}, o[id]), k = r.k; if (KS.includes(k)) { delete r.k; n[k].push(r) } }
@@ -157,8 +166,9 @@
         const rate = () => ({ BRL: 1, USD: 1 / S.set.usd, EUR: 1 / S.set.eur }[S.set.cur] || 1);
         const R = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: S.set.cur }).format((v || 0) * rate());
         const N = (v, d = 0) => (+v || 0).toLocaleString('pt-BR', { maximumFractionDigits: d });
-        let tab = 'calc', sub = 'sp';
-        const C0 = () => ({ name: '', qty: 1, w: 0, t: 0, mid: '', sid: '', kg: null, multi: false, w2: 0, kg2: 0, fin: 0, oth: 0, pack: 0, fail: 0, img: '', editId: null, prof: 50, round: false, ded: true });
+        
+        let tab = sessionStorage.getItem('lastTab') || 'calc', sub = 'sp';
+        const C0 = () => ({ name: '', qty: 1, w: 0, t: 0, mid: '', sid: '', kg: null, multi: false, w2: 0, kg2: 0, fin: 0, oth: 0, pack: 0, fail: 0, img: '', editId: null, prof: 100, round: false, ded: true });
         let C = C0();
         
         function calc() {
@@ -170,7 +180,6 @@
             if (C.round) { tot = Math.ceil(tot * rate()) / rate(); profit = tot - cost }
             return { mat, en, dep, mn, lab, u, loss: lossC, cost, cu: cost / q, profit, tot, unit: tot / q, roi: m.price > 0 && profit > 0 ? Math.ceil(m.price / (profit / q)) : 0, m, sp }
         }
-        
         const fld = (k, l, s = 'any', ex = '') => `<label>${l}<input type="number" step="${s}" data-k="${k}" value="${C[k] ?? ''}" ${ex}></label>`;
         function renderCalc() {
             const mo = `<option value="">Sem perfil</option>` + S.machines.map(m => `<option value="${m.id}" ${m.id == C.mid ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
@@ -178,17 +187,17 @@
             $('#v-calc').innerHTML = `<div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:14px"><b style="letter-spacing:.1em;font-size:13px">${C.editId ? 'EDITANDO PROJETO SALVO' : 'PARÂMETROS'}</b><button class="dg" data-a="reset" title="Limpar">Limpar</button></div>
 <div class="f2" style="grid-template-columns:2fr 1fr"><label>Nome do projeto<input data-k="name" value="${esc(C.name)}"></label>${fld('qty', 'Qtd', '1')}</div>
 <label style="margin-top:12px">Foto do projeto<div class="pv" id="cpv">${C.img ? `<img src="${C.img}" alt="">` : 'Sem imagem'}</div><input type="file" accept="image/*" id="cfi"></label>
-<div class="box"><div class="f2">${fld('w', 'Peso total (g)')}${fld('t', 'Tempo total (h)')}</div></div>
+<div class="box"><div class="f2">${fld('w', 'Peso total do projeto (g)')}${fld('t', 'Tempo total (h)')}</div></div>
 <div class="f2" style="margin-top:12px"><label>Impressora<select data-k="mid">${mo}</select></label><label>Filamento (estoque)<select data-k="sid">${so}</select></label></div>
 <div style="margin-top:12px">${fld('kg', 'Custo do kg (se manual)', 'any', `placeholder="${S.set.kg}"`)}</div>
-<label style="margin-top:14px"><input type="checkbox" data-k="multi" ${C.multi ? 'checked' : ''}>Multi-material</label>
+<label style="margin-top:14px"><input type="checkbox" data-k="multi" ${C.multi ? 'checked' : ''}>Multi-material (AMS/MMU)</label>
 ${C.multi ? `<div class="f2" style="margin-top:8px">${fld('w2', 'Peso 2 (g)')}${fld('kg2', 'Custo 2 (kg)')}</div>` : ''}
-<h3>Pós-processamento</h3>${fld('fin', 'Tempo acabamento (h)')}
-<h3>Extras</h3><div class="f2">${fld('oth', 'Outros (R$)')}${fld('pack', 'Embalagem (R$)')}</div>
-<h3>Falhas</h3>${fld('fail', 'Peças com falha', '1')}
+<h3>Pós-processamento</h3>${fld('fin', 'Tempo de acabamento total (h)')}
+<h3>Extras</h3><div class="f2">${fld('oth', 'Outros (R$ total)')}${fld('pack', 'Embalagem (R$ total)')}</div>
+<h3>Falhas</h3>${fld('fail', 'Peças com falha (ex.: 5 de 20)', '1')}
 <h3>Lucro desejado: <span id="pl">${C.prof}</span>%</h3><input type="range" min="0" max="250" data-k="prof" value="${Math.min(C.prof, 250)}">
-<label style="margin-top:8px">Ou digite valor (%)<input type="number" data-k="prof" value="${C.prof}"></label>
-<div style="margin-top:12px"><label><input type="checkbox" data-k="round" ${C.round ? 'checked' : ''}>Arredondar preço</label><label style="margin-top:8px"><input type="checkbox" data-k="ded" ${C.ded ? 'checked' : ''}>Baixar filamento</label></div></div>
+<label style="margin-top:8px">Ou digite qualquer valor (%)<input type="number" data-k="prof" value="${C.prof}"></label>
+<div style="margin-top:12px"><label><input type="checkbox" data-k="round" ${C.round ? 'checked' : ''}>Arredondar preço</label><label style="margin-top:8px"><input type="checkbox" data-k="ded" ${C.ded ? 'checked' : ''}>Baixar filamento do estoque ao salvar</label></div></div>
 <div><div class="card np" id="res"></div><div class="card" id="viz" style="margin-top:16px"></div></div></div>`;
             const ci = $('#cfi'); if (ci) ci.onchange = () => ci.files[0] && rz(ci.files[0], u => { C.img = u; $('#cpv').innerHTML = `<img src="${u}" alt="">` }); res()
         }
@@ -196,42 +205,50 @@ ${C.multi ? `<div class="f2" style="margin-top:8px">${fld('w2', 'Peso 2 (g)')}${
         function res() {
             const c = calc(), q = Math.max(C.qty, 1), r = rows(c);
             $('#res').innerHTML = `<div class="top"><div class="half"><div class="lbl">PROJETO TOTAL</div><div class="big">${R(c.tot)}</div><div class="chip g"><span>LUCRO</span><b>${R(c.profit)}</b></div><div class="chip"><span>CUSTO</span><b>${R(c.cost)}</b></div></div>
-<div class="half pu"><div class="lbl">POR UNIDADE</div><div class="big">${R(c.unit)}</div><div class="chip g"><span>LUCRO</span><b>${R(c.profit / q)}</b></div><div class="chip"><span>CUSTO</span><b>${R(c.cu)}</b></div></div></div>
+<div class="half pu"><div class="lbl">POR UNIDADE · ÷ ${N(C.qty)}</div><div class="big">${R(c.unit)}</div><div class="chip g"><span>LUCRO</span><b>${R(c.profit / q)}</b></div><div class="chip"><span>CUSTO</span><b>${R(c.cu)}</b></div></div></div>
 <table class="cmp"><tr><th style="text-align:left">COMPOSIÇÃO</th><th>TOTAL</th><th>UNITÁRIO</th></tr>${r.map(x => `<tr><td><i style="background:${x[1]}"></i>${x[0]}</td><td>${R(x[2])}</td><td class="mu">${R(x[2] / q)}</td></tr>`).join('')}<tr class="fin"><td>CUSTO FINAL</td><td>${R(c.cost)}</td><td class="mu">${R(c.cu)}</td></tr></table>
-<div class="roi"><div><b>ROI (PAYBACK)</b><div class="mu sm">${c.roi ? 'Pague a impressora vendendo:' : 'Escolha uma impressora.'}</div></div><div class="rn">${c.roi ? N(c.roi) : '—'} <small>UNID.</small></div></div>
-<div class="act"><button data-a="savep">Salvar</button><button data-a="csvp">CSV</button><button data-a="copyq">Copiar</button><button data-a="waq">Enviar</button><button class="pri" data-a="quoteb">Orçto</button></div>`;
-            const tt = c.cost || 1; $('#viz').innerHTML = `<h3 style="margin-top:0">VISUAL</h3><div class="stk">${r.map(x => `<i style="flex:${Math.max(x[2], 0)};background:${x[1]}"></i>`).join('')}</div>${r.map(x => `<div class="line"><span><i class="dot" style="background:${x[1]}"></i>${x[0]}</span><b>${N(x[2] / tt * 100, 1)}%</b></div>`).join('')}`
+<div class="roi"><div><b>ROI (PAYBACK)</b><div class="mu sm" style="letter-spacing:0">${c.roi ? 'Pague a impressora vendendo:' : 'Escolha uma impressora com preço.'}</div></div><div class="rn">${c.roi ? N(c.roi) : '—'} <small>UNID.</small></div></div>
+<div class="act"><button data-a="savep">Salvar</button><button data-a="csvp">CSV</button><button data-a="copyq">Copiar</button><button data-a="waq">Enviar</button><button class="pri" data-a="quoteb">Orçamento</button></div>`;
+            const tt = c.cost || 1; $('#viz').innerHTML = `<h3 style="margin-top:0">DETALHAMENTO VISUAL</h3><div class="stk">${r.map(x => `<i style="flex:${Math.max(x[2], 0)};background:${x[1]}"></i>`).join('')}</div>${r.map(x => `<div class="line"><span><i class="dot" style="background:${x[1]}"></i>${x[0]}</span><b>${N(x[2] / tt * 100, 1)}%</b></div>`).join('')}`
         }
-        const quote = () => { const c = calc(); return `*ORÇAMENTO*\n${C.name || 'Projeto'}\nQtd: ${C.qty} · Unitário: ${R(c.unit)}\nTOTAL: ${R(c.tot)}\nVálido por 7 dias.` };
+        const quote = () => { const c = calc(); return `*ORÇAMENTO*\n${C.name || 'Projeto'}\nQtd: ${C.qty} · Unitário: ${R(c.unit)}\nTOTAL: ${R(c.tot)}\nVálido por 7 dias. Sujeito a alteração conforme disponibilidade de material.` };
 
         function renderHist() {
             const h = S.hist, fat = h.reduce((a, x) => a + x.tot, 0), lu = h.reduce((a, x) => a + x.profit, 0);
             $('#v-hist').innerHTML = `<div class="hd"><div class="ttl"><span class="ic" style="color:var(--pu)">⟲</span><h2>Histórico</h2></div><div class="row"><button class="dg" data-a="clearh">Limpar tudo</button><button data-a="csv">Exportar CSV</button><span class="badge pu">${h.length} PROJETOS</span></div></div>
 <div class="g3"><div class="card st"><span class="gr">FATURAMENTO TOTAL</span><b>${R(fat)}</b></div><div class="card st"><span style="color:var(--ac)">LUCRO ESTIMADO</span><b>${R(lu)}</b></div><div class="card st"><span style="color:var(--pu)">PROJETOS SALVOS</span><b>${h.length}</b></div></div>
-${h.length ? `<div class="cat">${h.slice().reverse().map(x => `<div class="card"><div class="ph" style="height:230px;cursor:pointer" data-a="viewh" data-id="${x.id}">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font-family:Rajdhani;font-size:19px;text-transform:uppercase">${esc(x.name)}</b><span class="badge">${x.qty} UN</span></div><div class="mu sm">${x.d}</div><div class="line"><span class="mu">Custo/un</span><b>${R(x.cu ?? x.cost / Math.max(x.qty, 1))}</b></div><div class="line"><span class="mu">Venda/un</span><b class="gr">${R(x.up ?? x.tot / Math.max(x.qty, 1))}</b></div><div class="row" style="margin-top:10px"><button class="pri" data-a="viewh" data-id="${x.id}">Ver tudo</button>${x.c ? `<button data-a="edh" data-id="${x.id}">Editar</button>` : ''}<button class="gb" data-a="tocat" data-id="${x.id}">${S.items.some(i => i.hid == x.id) ? 'No catálogo ✓' : 'Catálogo'}</button><button class="dg" data-a="delh" data-id="${x.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Nenhum projeto salvo.<br><br><button class="pri" data-a="go" data-id="calc">Criar novo orçamento</button></div>`}`
+${h.length ? `<div class="cat">${h.slice().reverse().map(x => `<div class="card"><div class="ph" style="height:230px;cursor:pointer" data-a="viewh" data-id="${x.id}">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font-family:Rajdhani;font-size:19px;text-transform:uppercase">${esc(x.name)}</b><span class="badge">${x.qty} UN</span></div><div class="mu sm">${x.d}</div><div class="line"><span class="mu">Custo/un</span><b>${R(x.cu ?? x.cost / Math.max(x.qty, 1))}</b></div><div class="line"><span class="mu">Venda/un</span><b class="gr">${R(x.up ?? x.tot / Math.max(x.qty, 1))}</b></div><div class="row" style="margin-top:10px"><button class="pri" data-a="viewh" data-id="${x.id}">Ver tudo</button>${x.c ? `<button data-a="edh" data-id="${x.id}">Editar</button>` : ''}<button class="gb" data-a="tocat" data-id="${x.id}">${S.items.some(i => i.hid == x.id) ? 'No catálogo ✓' : 'Enviar ao catálogo'}</button><button class="dg" data-a="delh" data-id="${x.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Nenhum projeto salvo.<br><br><button class="pri" data-a="go" data-id="calc">Criar novo orçamento</button></div>`}`
         }
 
         function renderEst() {
             const sp = sub == 'sp'; let body = '';
-            if (sp) body = S.spools.length ? `<div class="cat">${S.spools.map(s => { const p = Math.min(100, s.cur / Math.max(s.init, 1) * 100), low = p < 20; return `<div class="card" style="padding:16px"><div class="row" style="flex-wrap:nowrap;margin-bottom:14px"><div class="cir">${s.img ? `<img src="${s.img}" alt="">` : ''}</div><div><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(s.brand)}</b><div><span class="tag">${s.mat}</span> <span class="mu sm">${esc(s.color)}</span></div></div></div><div class="line mu" style="font-size:11px;letter-spacing:.08em"><span>DISPONÍVEL</span><span><b style="color:var(--tx)">${N(s.cur)}G</b> / ${N(s.init)}G</span></div><div class="bar ${low ? 'low' : ''}"><i style="width:${p}%"></i></div><div class="line" style="border-top:1px solid var(--bd);padding-top:10px"><span class="mu">Custo/Kg</span><b class="gr">${R(s.price / Math.max(s.init, 1) * 1000)}</b></div><div class="row" style="margin-top:8px"><button data-a="edsp" data-id="${s.id}">Editar</button><button class="dg" data-a="delsp" data-id="${s.id}">Excluir</button>${low ? '<span class="badge low">ACABANDO</span>' : ''}</div></div>` }).join('')}</div>` : `<div class="empty">Estoque vazio.<br><br><button class="pri" data-a="newsp">Adicionar carretel</button></div>`;
-            else body = S.items.length ? `<div class="cat">${S.items.map(i => `<div class="card"><div class="ph" style="height:250px">${i.img ? `<img src="${i.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font:700 19px Rajdhani;text-transform:uppercase">${esc(i.name)}</b><span class="badge ${i.qty < 1 ? 'low' : ''}">${N(i.qty)} EM ESTOQUE</span></div><div class="mu sm">${esc(i.desc)}</div><div class="mu sm">${N(i.w, 1)}g · ${N(i.t, 2)}h por un.</div>${i.cost ? `<div class="line"><span class="mu">Custo/un</span><b>${R(i.cost)}</b></div>` : ''}<div class="line"><span class="mu">Venda/un</span><b class="gr">${R(i.price)}</b></div><div class="row"><button class="pri" data-a="useit" data-id="${i.id}">Usar na calculadora</button><button data-a="qm" data-id="${i.id}">−1</button><button data-a="qp" data-id="${i.id}">+1</button></div><div class="row" style="margin-top:6px"><button data-a="edit" data-id="${i.id}">Editar</button><button class="dg" data-a="delit" data-id="${i.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Catálogo vazio.<br><br><button class="pri" data-a="newit">Cadastrar peça</button></div>`;
-            $('#v-est').innerHTML = `<div class="hd"><div class="ttl"><span class="ic" style="color:var(--gr)">▣</span><div><h2>Gestão de estoque</h2><div class="mu sm">Gerencie seus filamentos e peças.</div></div></div><button class="gb" data-a="${sp ? 'newsp' : 'newit'}">+ ${sp ? 'Novo carretel' : 'Nova peça'}</button></div>
+            if (sp) body = S.spools.length ? `<div class="cat">${S.spools.map(s => { const p = Math.min(100, s.cur / Math.max(s.init, 1) * 100), low = p < 20; return `<div class="card" style="padding:16px"><div class="row" style="flex-wrap:nowrap;margin-bottom:14px"><div class="cir">${s.img ? `<img src="${s.img}" alt="">` : ''}</div><div><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(s.brand)}</b><div><span class="tag">${s.mat}</span> <span class="mu sm">${esc(s.color)}</span></div></div></div><div class="line mu" style="font-size:11px;letter-spacing:.08em"><span>DISPONÍVEL</span><span><b style="color:var(--tx)">${N(s.cur)}G</b> / ${N(s.init)}G</span></div><div class="bar ${low ? 'low' : ''}"><i style="width:${p}%"></i></div><div class="line" style="border-top:1px solid var(--bd);padding-top:10px"><span class="mu">Custo/Kg</span><b class="gr">${R(s.price / Math.max(s.init, 1) * 1000)}</b></div><div class="row" style="margin-top:8px"><button data-a="edsp" data-id="${s.id}">Editar</button><button class="dg" data-a="delsp" data-id="${s.id}">Excluir</button>${low ? '<span class="badge low">ACABANDO</span>' : ''}</div></div>` }).join('')}</div>` : `<div class="empty">Seu estoque está vazio.<br><br><button class="pri" data-a="newsp">Adicionar primeiro carretel</button></div>`;
+            else body = S.items.length ? `<div class="cat">${S.items.map(i => `<div class="card"><div class="ph" style="height:250px">${i.img ? `<img src="${i.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font:700 19px Rajdhani;text-transform:uppercase">${esc(i.name)}</b><span class="badge ${i.qty < 1 ? 'low' : ''}">${N(i.qty)} EM ESTOQUE</span></div><div class="mu sm">${esc(i.desc)}</div><div class="mu sm">${N(i.w, 1)}g · ${N(i.t, 2)}h por un.</div>${i.cost ? `<div class="line"><span class="mu">Custo/un</span><b>${R(i.cost)}</b></div>` : ''}<div class="line"><span class="mu">Venda/un</span><b class="gr">${R(i.price)}</b></div><div class="row"><button class="pri" data-a="useit" data-id="${i.id}">Usar na calculadora</button><button data-a="qm" data-id="${i.id}">−1</button><button data-a="qp" data-id="${i.id}">+1</button></div><div class="row" style="margin-top:6px"><button data-a="edit" data-id="${i.id}">Editar</button><button class="dg" data-a="delit" data-id="${i.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Seu catálogo está vazio. Envie projetos do Histórico ou cadastre uma peça.<br><br><button class="pri" data-a="newit">Cadastrar primeira peça</button></div>`;
+            $('#v-est').innerHTML = `<div class="hd"><div class="ttl"><span class="ic" style="color:var(--gr)">▣</span><div><h2>Gestão de estoque</h2><div class="mu sm">Gerencie seus filamentos e organize suas peças como um catálogo.</div></div></div><button class="gb" data-a="${sp ? 'newsp' : 'newit'}">+ ${sp ? 'Novo carretel' : 'Nova peça'}</button></div>
 <div class="sub2"><button class="tab ${sp ? 'on' : ''}" data-a="sub" data-id="sp">Filamentos</button><button class="tab ${!sp ? 'on' : ''}" data-a="sub" data-id="it">Catálogo de peças</button></div>${body}`
         }
 
         function renderSet() {
             const s = S.set;
-            $('#v-set').innerHTML = `<div class="hd"><div class="ttl"><span class="ic">⚙</span><div><h2>Ajustes</h2><div class="mu sm">Defina os parâmetros da sua farm.</div></div></div></div>
+            $('#v-set').innerHTML = `<div class="hd"><div class="ttl"><span class="ic">⚙</span><div><h2>Ajustes</h2><div class="mu sm">Defina os parâmetros da sua farm de impressão.</div></div></div></div>
 <div class="row" style="margin-bottom:8px"><h3 style="margin:0;flex:1">Perfis de máquina</h3><button class="pri" data-a="newmc">Nova impressora</button></div>
-${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card" style="padding:16px"><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(m.name)}</b><div class="mu sm">${N(m.watts)}W · ${R(m.price)} · vida útil ${N(m.life)}h</div><div class="mu sm">Depreciação ${R(m.price / Math.max(m.life, 1))}/h · Manutenção ${R(m.maint)}/h</div><div class="row" style="margin-top:10px"><button data-a="edmc" data-id="${m.id}">Editar</button><button data-a="dupmc" data-id="${m.id}">Duplicar</button><button class="dg" data-a="delmc" data-id="${m.id}">Excluir</button></div></div>`).join('')}</div>` : `<div class="empty">Nenhuma impressora cadastrada.</div>`}
+${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card" style="padding:16px"><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(m.name)}</b><div class="mu sm">${N(m.watts)}W · ${R(m.price)} · vida útil ${N(m.life)}h</div><div class="mu sm">Depreciação ${R(m.price / Math.max(m.life, 1))}/h · Manutenção ${R(m.maint)}/h</div><div class="row" style="margin-top:10px"><button data-a="edmc" data-id="${m.id}">Editar</button><button data-a="dupmc" data-id="${m.id}">Duplicar</button><button class="dg" data-a="delmc" data-id="${m.id}">Excluir</button></div></div>`).join('')}</div>` : `<div class="empty">Nenhuma impressora cadastrada. Cada perfil fica salvo e aparece na calculadora.</div>`}
 <h3>Parâmetros de negócio</h3><div class="card"><div class="f2">
 <label>Custo energia (R$/kWh)<input type="number" step="any" data-s="kwh" value="${s.kwh}"></label><label>Custo kg padrão (R$)<input type="number" step="any" data-s="kg" value="${s.kg}"></label>
-<label>Lucro mínimo projeto (R$)<input type="number" step="any" data-s="minP" value="${s.minP}"></label><label>Mão de obra (R$/h)<input type="number" step="any" data-s="labor" value="${s.labor}"></label>
+<label>Lucro mínimo por projeto (R$)<input type="number" step="any" data-s="minP" value="${s.minP}"></label><label>Mão de obra (R$/h)<input type="number" step="any" data-s="labor" value="${s.labor}"></label>
 <label>1 USD = R$<input type="number" step="any" data-s="usd" value="${s.usd}"></label><label>1 EUR = R$<input type="number" step="any" data-s="eur" value="${s.eur}"></label></div>
-<div class="mu sm" style="margin-top:8px">Moeda exibida no topo. Cotações manuais.</div></div>
-<h3>Segurança de dados</h3><div class="card row"><button data-a="bk">Baixar backup</button><label style="margin:0"><span class="mu sm">Restaurar</span><input type="file" accept=".json" id="rs"></label></div>`}
+<div class="mu sm" style="margin-top:8px">A moeda de exibição fica no topo. As cotações são manuais: esta versão não consulta câmbio online.</div></div>
+<h3>Segurança de dados</h3><div class="card row"><button data-a="bk">Baixar backup</button><label style="margin:0"><span class="mu sm">Restaurar (substitui os dados atuais)</span><input type="file" accept=".json" id="rs"></label></div>`}
+        
         const render = () => ({ calc: renderCalc, hist: renderHist, est: renderEst, set: renderSet }[tab])();
-        function go(t) { tab = t; document.querySelectorAll('.v').forEach(e => e.classList.toggle('on', e.id == 'v-' + t)); document.querySelectorAll('header .tab').forEach(e => e.classList.toggle('on', e.dataset.t == t)); render() }
+        
+        function go(t) { 
+            tab = t; 
+            sessionStorage.setItem('lastTab', t); 
+            document.querySelectorAll('.v').forEach(e => e.classList.toggle('on', e.id == 'v-' + t)); 
+            document.querySelectorAll('header .tab').forEach(e => e.classList.toggle('on', e.dataset.t == t)); 
+            render();
+        }
 
         let imgs = {};
         function rz(f, cb) { const r = new FileReader(); r.onload = () => shrink(r.result).then(cb); r.readAsDataURL(f) }
@@ -242,9 +259,9 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
             $('#cx').onclick = () => d.close(); $('#sv').onclick = e => { const o = {}; fs.forEach(f => { if (f[2] == 'img') o.img = imgs.img; else { const x = d.querySelector(`[name=${f[0]}]`).value; o[f[0]] = f[2] == 'number' ? +x || 0 : x } }); ok(o); d.close() }; d.showModal()
         }
         const mOpts = () => [['', 'Sem perfil']].concat(S.machines.map(m => [m.id, m.name])), sOpts = () => [['', 'Manual']].concat(S.spools.map(s => [s.id, `${s.brand} ${s.mat} ${s.color}`]));
-        const MF = [['name', 'Nome', 'text'], ['watts', 'Consumo (W)', 'number'], ['price', 'Preço (R$)', 'number'], ['life', 'Vida útil (h)', 'number'], ['maint', 'Manutenção (R$/h)', 'number']];
-        const SF = [['img', 'Foto', 'img'], ['brand', 'Marca', 'text'], ['mat', 'Material', 'sel', ['PLA', 'PETG', 'ABS', 'TPU', 'ASA', 'Resina'].map(x => [x, x])], ['color', 'Cor/descrição', 'text'], ['init', 'Peso inicial (g)', 'number'], ['cur', 'Peso atual (g)', 'number'], ['price', 'Preço (R$)', 'number']];
-        const IF = () => [['img', 'Foto', 'img'], ['name', 'Nome', 'text'], ['desc', 'Descrição', 'text'], ['w', 'Peso (g)', 'number'], ['t', 'Tempo (h)', 'number'], ['mid', 'Impressora', 'sel', mOpts()], ['sid', 'Filamento', 'sel', sOpts()], ['cost', 'Custo/un (R$)', 'number'], ['price', 'Venda/un (R$)', 'number'], ['qty', 'Estoque', 'number']];
+        const MF = [['name', 'Nome (ex.: Bambu X1C)', 'text'], ['watts', 'Consumo (W)', 'number'], ['price', 'Preço da máquina (R$)', 'number'], ['life', 'Vida útil (h)', 'number'], ['maint', 'Manutenção (R$/h)', 'number']];
+        const SF = [['img', 'Foto do carretel', 'img'], ['brand', 'Marca', 'text'], ['mat', 'Material', 'sel', ['PLA', 'PETG', 'ABS', 'TPU', 'ASA', 'Resina'].map(x => [x, x])], ['color', 'Cor / descrição', 'text'], ['init', 'Peso inicial (g)', 'number'], ['cur', 'Peso atual (g)', 'number'], ['price', 'Preço pago (R$)', 'number']];
+        const IF = () => [['img', 'Foto da peça', 'img'], ['name', 'Nome', 'text'], ['desc', 'Descrição', 'text'], ['w', 'Peso por unidade (g)', 'number'], ['t', 'Tempo por unidade (h)', 'number'], ['mid', 'Impressora', 'sel', mOpts()], ['sid', 'Filamento', 'sel', sOpts()], ['cost', 'Custo por unidade (R$)', 'number'], ['price', 'Preço de venda (R$)', 'number'], ['qty', 'Unidades em estoque', 'number']];
         const dl = (n, t, m) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: m })); a.download = n; a.click() };
         const by = (a, id) => S[a].find(x => x.id == id);
 
@@ -262,7 +279,7 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
             const t = e.target;
             if (t.dataset.k && t.tagName == 'SELECT') { C[t.dataset.k] = t.value; res() }
             if (t.dataset.s == 'cur') { S.set.cur = t.value; save(); render() }
-            if (t.id == 'rs' && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); ask('Substituir dados?', () => { S = Object.assign({}, D0, o); S.set = Object.assign({}, D0.set, S.set); save(); theme(); render() }) } catch (x) { toast('Backup inválido.') } }; r.readAsText(t.files[0]) }
+            if (t.id == 'rs' && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); ask('Substituir todos os dados atuais?', () => { S = Object.assign({}, D0, o); S.set = Object.assign({}, D0.set, S.set); save(); theme(); render() }) } catch (x) { toast('Arquivo de backup inválido.') } }; r.readAsText(t.files[0]) }
         });
         document.addEventListener('click', e => {
             const b = e.target.closest('button,[data-a]'); if (!b) return;
@@ -270,44 +287,44 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
             if (b.dataset.t) return go(b.dataset.t);
             const a = b.dataset.a, id = b.dataset.id; if (!a) return;
             const A = {
-                go: () => go(id), sync: () => { if (!COL) return toast('Sem sincronização.'); pullData().then(() => toast('Dados atualizados.')).catch(() => toast('Erro ao atualizar.')) }, sub: () => { sub = id; renderEst() }, reset: () => { C = C0(); renderCalc() },
+                go: () => go(id), sync: () => { if (!COL) return toast('Sincronização indisponível.'); pullData().then(() => toast('Dados atualizados da nuvem.')).catch(() => toast('Não foi possível atualizar.')) }, sub: () => { sub = id; renderEst() }, reset: () => { C = C0(); renderCalc() },
                 savep: () => {
                     const c = calc();
                     const h = { id: C.editId || uid(), d: new Date().toLocaleDateString('pt-BR'), name: C.name || 'Projeto', qty: C.qty, tot: c.tot, profit: c.profit, cost: c.cost, cu: c.cu, up: c.unit, img: C.img, mn: c.m.name || '', sn: c.sp ? `${c.sp.brand} ${c.sp.mat} ${c.sp.color}` : 'Manual', b: { mat: c.mat, en: c.en, dep: c.dep, mnt: c.mn, lab: c.lab, loss: c.loss }, c: Object.assign({}, C, { img: '', editId: null }) }, wasEdit = !!C.editId, ix = S.hist.findIndex(x => x.id == C.editId);
                     if (ix >= 0) S.hist[ix] = h; else S.hist.push(h);
                     if (C.ded && c.sp && !wasEdit) c.sp.cur = Math.max(0, c.sp.cur - C.w * (1 + (C.fail || 0) / Math.max(C.qty, 1)));
-                    if (save()) { C = C0(); go('hist'); toast(wasEdit ? 'Atualizado.' : 'Salvo no histórico.') }
+                    if (save()) { C = C0(); go('hist'); toast(wasEdit ? 'Projeto atualizado.' : 'Projeto salvo no histórico.') }
                 },
                 csvp: () => { const c = calc(); dl('projeto.csv', 'Projeto;Qtd;Custo total;Lucro;Total;Custo/un;Venda/un\n' + [C.name || 'Projeto', C.qty, c.cost.toFixed(2), c.profit.toFixed(2), c.tot.toFixed(2), c.cu.toFixed(2), c.unit.toFixed(2)].join(';'), 'text/csv') },
-                copyq: () => { const t = quote(), fb = () => { const d = $('#cf'); d.innerHTML = `<p style="margin:0 0 10px">Copie o texto:</p><textarea readonly rows="6" style="width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px">${esc(t)}</textarea><div class="row r" style="margin-top:12px"><button id="cn">Fechar</button></div>`; $('#cn').onclick = () => d.close(); d.showModal(); d.querySelector('textarea').select() }; try { navigator.clipboard.writeText(t).then(() => toast('Copiado.'), fb) } catch (x) { fb() } },
+                copyq: () => { const t = quote(), fb = () => { const d = $('#cf'); d.innerHTML = `<p style="margin:0 0 10px">Copie o texto abaixo:</p><textarea readonly rows="6" style="width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px">${esc(t)}</textarea><div class="row r" style="margin-top:12px"><button id="cn">Fechar</button></div>`; $('#cn').onclick = () => d.close(); d.showModal(); d.querySelector('textarea').select() }; try { navigator.clipboard.writeText(t).then(() => toast('Orçamento copiado.'), fb) } catch (x) { fb() } },
                 waq: () => window.open('https://wa.me/?text=' + encodeURIComponent(quote()), '_blank'),
-                quoteb: () => { const c = calc(), d = $('#dlg'); d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:20px">ORÇAMENTO</h3><div class="mu sm">Data: ${new Date().toLocaleDateString('pt-BR')}</div><h3>Detalhes</h3><table><tr class="mu sm"><td>Item</td><td>Qtd</td><td>Unid</td><td>Total</td></tr><tr><td>${esc(C.name || 'Projeto')}<div class="mu sm">Mat: ${c.sp ? c.sp.mat : '—'} · ${N(C.t, 1)}h · ${N(C.w)}g</div></td><td>${N(C.qty)}</td><td>${R(c.unit)}</td><td>${R(c.tot)}</td></tr></table><div class="line" style="margin-top:12px;font-size:18px"><b>TOTAL</b><b>${R(c.tot)}</b></div><div class="mu sm">Válido por 7 dias.</div><div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="pri" id="pr">Imprimir</button></div>`; $('#cl').onclick = () => d.close(); $('#pr').onclick = () => window.print(); d.showModal() },
+                quoteb: () => { const c = calc(), d = $('#dlg'); d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:20px">ORÇAMENTO</h3><div class="mu sm">Data: ${new Date().toLocaleDateString('pt-BR')}</div><h3>Detalhamento do projeto</h3><table><tr class="mu sm"><td>Item</td><td>Qtd</td><td>Unitário</td><td>Total</td></tr><tr><td>${esc(C.name || 'Projeto')}<div class="mu sm">Material: ${c.sp ? c.sp.mat : '—'} · Tempo: ${N(C.t, 1)}h · Peso: ${N(C.w)}g</div></td><td>${N(C.qty)}</td><td>${R(c.unit)}</td><td>${R(c.tot)}</td></tr></table><div class="line" style="margin-top:12px;font-size:18px"><b>TOTAL</b><b>${R(c.tot)}</b></div><div class="mu sm">Orçamento válido por 7 dias. Sujeito a alteração conforme disponibilidade de material.</div><div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="pri" id="pr">Imprimir</button></div>`; $('#cl').onclick = () => d.close(); $('#pr').onclick = () => window.print(); d.showModal() },
                 csv: () => dl('historico.csv', 'Data;Projeto;Qtd;Total;Lucro\n' + S.hist.map(x => [x.d, x.name, x.qty, x.tot.toFixed(2), x.profit.toFixed(2)].join(';')).join('\n'), 'text/csv'),
-                clearh: () => ask('Apagar histórico?', () => { S.hist = []; save(); renderHist() }),
-                delh: () => ask('Excluir projeto?', () => { S.hist = S.hist.filter(x => x.id != id); save(); renderHist() }),
+                clearh: () => ask('Apagar todo o histórico?', () => { S.hist = []; save(); renderHist() }),
+                delh: () => ask('Excluir este projeto do histórico?', () => { S.hist = S.hist.filter(x => x.id != id); save(); renderHist() }),
                 edh: () => { const x = by('hist', id); C = Object.assign(C0(), x.c, { img: x.img || '', editId: x.id }); go('calc') },
                 tocat: () => {
                     const x = by('hist', id), c = x.c || {}, q = Math.max(x.qty, 1), it = S.items.find(i => i.hid == x.id), o = { name: x.name, w: (c.w || 0) / q, t: (c.t || 0) / q, mid: c.mid || '', sid: c.sid || '', price: x.up ?? x.tot / q, cost: x.cu ?? x.cost / q, img: x.img || '', hid: x.id };
                     if (it) Object.assign(it, o); else S.items.push(Object.assign({ id: uid(), desc: '', qty: 0 }, o));
-                    if (save()) { toast(it ? 'Peça atualizada.' : 'No catálogo.'); if ($('#dlg').open) $('#dlg').close(); renderHist() }
+                    if (save()) { toast(it ? 'Peça atualizada no catálogo.' : 'Enviado ao catálogo de peças.'); if ($('#dlg').open) $('#dlg').close(); renderHist() }
                 },
                 viewh: () => {
                     const x = by('hist', id), b = x.b || {}, d = $('#dlg'), q = Math.max(x.qty, 1), l = (a, v) => `<div class="line"><span>${a}</span><span>${v}</span></div>`;
-                    d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:18px">${esc(x.name)}</h3><div class="pv" style="height:260px">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div>${l('Data', x.d)}${l('Qtd', x.qty)}${x.mn !== undefined ? l('Imp.', esc(x.mn || 'N/A')) + l('Fil.', esc(x.sn || 'Manual')) : ''}${x.c ? l('Peso / tempo', N(x.c.w) + 'g · ' + N(x.c.t, 1) + 'h') + l('Falhas', N(x.c.fail || 0)) + l('Lucro', N(x.c.prof) + '%') : ''}<h3>Custo</h3>${b.mat !== undefined ? l('Material', R(b.mat)) + l('Energia', R(b.en)) + l('Depreciação', R(b.dep)) + l('Manutenção', R(b.mnt)) + l('Mão de obra', R(b.lab)) + l('Falhas', R(b.loss)) : ''}${l('Custo total', R(x.cost))}${l('Custo/un', R(x.cu ?? x.cost / q))}<h3>Venda</h3>${l('Total', R(x.tot))}${l('Lucro', R(x.profit))}${l('Venda/un', '<b class="gr">' + R(x.up ?? x.tot / q) + '</b>')}<div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="gb" id="tc">Pro Catálogo</button>${x.c ? '<button class="pri" id="ed2">Editar</button>' : ''}</div>`;
+                    d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:18px">${esc(x.name)}</h3><div class="pv" style="height:260px">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div>${l('Data', x.d)}${l('Quantidade', x.qty + ' peças')}${x.mn !== undefined ? l('Impressora', esc(x.mn || 'Sem perfil')) + l('Filamento', esc(x.sn || 'Manual')) : ''}${x.c ? l('Peso / tempo do projeto', N(x.c.w) + 'g · ' + N(x.c.t, 1) + 'h') + l('Peças com falha', N(x.c.fail || 0)) + l('Lucro desejado', N(x.c.prof) + '%') : ''}<h3>Custo do projeto</h3>${b.mat !== undefined ? l('Material', R(b.mat)) + l('Energia', R(b.en)) + l('Depreciação', R(b.dep)) + l('Manutenção', R(b.mnt)) + l('Mão de obra', R(b.lab)) + l('Perda por falhas', R(b.loss)) : ''}${l('Custo total', R(x.cost))}${l('Custo por unidade', R(x.cu ?? x.cost / q))}<h3>Venda</h3>${l('Total do projeto', R(x.tot))}${l('Lucro', R(x.profit))}${l('Venda por unidade', '<b class="gr">' + R(x.up ?? x.tot / q) + '</b>')}<div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="gb" id="tc">Enviar ao catálogo</button>${x.c ? '<button class="pri" id="ed2">Editar</button>' : ''}</div>`;
                     $('#cl').onclick = () => d.close(); $('#tc').onclick = () => A.tocat(); const e2 = $('#ed2'); if (e2) e2.onclick = () => { d.close(); A.edh() }; d.showModal()
                 },
                 newsp: () => form('Novo carretel', SF, { mat: 'PLA' }, o => { S.spools.push(Object.assign({ id: uid() }, o)); save(); renderEst() }),
                 edsp: () => form('Editar carretel', SF, by('spools', id), o => { Object.assign(by('spools', id), o); save(); renderEst() }),
-                delsp: () => ask('Excluir carretel?', () => { S.spools = S.spools.filter(x => x.id != id); save(); renderEst() }),
+                delsp: () => ask('Excluir este carretel?', () => { S.spools = S.spools.filter(x => x.id != id); save(); renderEst() }),
                 newit: () => form('Nova peça', IF(), { qty: 0 }, o => { S.items.push(Object.assign({ id: uid() }, o)); save(); renderEst() }),
                 edit: () => form('Editar peça', IF(), by('items', id), o => { Object.assign(by('items', id), o); save(); renderEst() }),
-                delit: () => ask('Excluir peça?', () => { S.items = S.items.filter(x => x.id != id); save(); renderEst() }),
+                delit: () => ask('Excluir esta peça do catálogo?', () => { S.items = S.items.filter(x => x.id != id); save(); renderEst() }),
                 qm: () => { const i = by('items', id); i.qty = Math.max(0, i.qty - 1); save(); renderEst() }, qp: () => { by('items', id).qty++; save(); renderEst() },
                 useit: () => { const i = by('items', id); C = Object.assign(C0(), { name: i.name, w: i.w, t: i.t, mid: i.mid, sid: i.sid, img: i.img || '' }); go('calc') },
                 newmc: () => form('Nova impressora', MF, {}, o => { S.machines.push(Object.assign({ id: uid() }, o)); save(); renderSet() }),
                 edmc: () => form('Editar impressora', MF, by('machines', id), o => { Object.assign(by('machines', id), o); save(); renderSet() }),
                 dupmc: () => { const m = by('machines', id); S.machines.push(Object.assign({}, m, { id: uid(), name: m.name + ' (cópia)' })); save(); renderSet() },
-                delmc: () => ask('Excluir impressora?', () => { S.machines = S.machines.filter(x => x.id != id); save(); renderSet() }),
+                delmc: () => ask('Excluir este perfil de impressora?', () => { S.machines = S.machines.filter(x => x.id != id); save(); renderSet() }),
                 bk: () => dl('calc3d-backup.json', JSON.stringify(S), 'application/json')
             };
             A[a] && A[a]();
@@ -319,7 +336,6 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
           'sb_publishable_0pvUyBZ4r6PIZXtoOirl7A_MR7Ofe6W' 
         );
 
-       // Destrava o salvamento para o botão original funcionar
         COL = true; 
 
         async function pullData() {
@@ -383,45 +399,53 @@ ${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card"
             
             if (!email || !password) {
               errDiv.textContent = 'Preencha os dois campos.';
-              btnLogin.textContent = 'Entrar';
+              btnLogin.textContent = 'Acessar Sistema';
               return;
             }
 
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
-              errDiv.textContent = 'Erro Supabase: ' + error.message;
-              btnLogin.textContent = 'Entrar';
+              errDiv.textContent = 'Credenciais inválidas ou sem conexão.';
+              btnLogin.textContent = 'Acessar Sistema';
             } else {
               document.getElementById('login-screen').style.display = 'none';
               initSyncReal();
             }
           } catch (fatal) {
-            errDiv.textContent = 'Erro Fatal JS: ' + fatal.message;
-            btnLogin.textContent = 'Entrar';
+            errDiv.textContent = 'Erro ao processar login.';
+            btnLogin.textContent = 'Acessar Sistema';
           }
         };
 
-        // Atualização inteligente ao mudar de aba
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) {
+          btnLogout.onclick = async () => {
+            await supabase.auth.signOut();
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('login-pwd').value = '';
+          };
+        }
+
         document.addEventListener('visibilitychange', () => {
           if (!document.hidden && document.getElementById('login-screen').style.display === 'none') {
             pullData();
           }
         });
 
-        // Botão forçar sincronização
-        document.getElementById('sy').addEventListener('click', async (e) => {
-          e.stopPropagation();
-          badge('Baixando dados...');
-          await pullData();
-          badge('☁ Sincronizado');
-        }, true);
+        const syBtn = document.getElementById('sy');
+        if(syBtn) {
+            syBtn.addEventListener('click', async (e) => {
+              e.stopPropagation();
+              badge('Baixando dados...');
+              await pullData();
+              badge('☁ Sincronizado');
+            }, true);
+        }
 
         checkLogin();
-
-        // Renderiza a interface por baixo da tela preta
+        go(tab);
         theme(); 
-        render();
     </script>
 </body>
 </html>
