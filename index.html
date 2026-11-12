@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Calc3D · Precificação e Estoque</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #04071a;
+            --sf: #0b1226;
+            --s2: #121b33;
+            --bd: #1f2b47;
+            --tx: #e6ecf8;
+            --mu: #7d8db0;
+            --ac: #22b8e0;
+            --gr: #3dbb83;
+            --pu: #c13fe6;
+            --ye: #f5b82e;
+            --bad: #f0524f;
+            box-sizing: border-box;
+            padding-top: env(safe-area-inset-top, 0px);
+            padding-bottom: env(safe-area-inset-bottom, 0px)
+        }
+
+        :root[data-theme="light"] {
+            --bg: #eef2f8;
+            --sf: #fff;
+            --s2: #e9eff8;
+            --bd: #cdd8e8;
+            --tx: #0b1226;
+            --mu: #5a6a88;
+            --ac: #0b86ad;
+            --gr: #0d8a56;
+            --pu: #9a22b8;
+            --ye: #a87306;
+            --bad: #c42b28
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-padding-top: env(safe-area-inset-top, 0px)
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            background-image: linear-gradient(rgba(125, 141, 176, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(125, 141, 176, .08) 1px, transparent 1px);
+            background-size: 36px 36px;
+            color: var(--tx);
+            font: 15px/1.45 Outfit, "Segoe UI", system-ui, sans-serif
+        }
+
+        header {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 5;
+            background: var(--sf);
+            border-bottom: 1px solid var(--bd);
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            padding: 10px 16px;
+            overflow-x: auto
+        }
+
+        .lg {
+            display: flex;
+            flex-direction: column;
+            margin-right: 14px;
+            padding-right: 14px;
+            border-right: 1px solid var(--bd);
+            white-space: nowrap
+        }
+
+        .lg b {
+            font: 700 22px Rajdhani, sans-serif;
+            line-height: 1
+        }
+
+        .lg small {
+            color: var(--ac);
+            font-size: 10px;
+            letter-spacing: .2em;
+            font-weight: 700
+        }
+
+        .tab {
+            background: none;
+            border: 1px solid transparent;
+            color: var(--mu);
+            font: 700 12px Outfit, sans-serif;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            padding: 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap
+        }
+
+        .tab.on {
+            background: color-mix(in srgb, var(--ac) 16%, transparent);
+            border-color: color-mix(in srgb, var(--ac) 40%, transparent);
+            color: var(--ac)
+        }
+
+        main {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 26px 16px 70px
+        }
+
+        h2 {
+            margin: 0;
+            font: 700 30px Rajdhani, sans-serif;
+            letter-spacing: .02em;
+            text-transform: uppercase
+        }
+
+        .sp0 {
+            flex: 1
+        }
+
+        .v {
+            display: none
+        }
+
+        .v.on {
+            display: block
+        }
+
+        .mono,
+        .line b,
+        .cmp td,
+        .rn,
+        .chip b,
+        .st b {
+            font-family: "JetBrains Mono", monospace
+        }
+
+        h3 {
+            margin: 18px 0 8px;
+            font-size: 12px;
+            color: var(--mu);
+            letter-spacing: .1em;
+            text-transform: uppercase
+        }
+
+        .two {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: 1fr 1.45fr;
+            align-items: start
+        }
+
+        @media(max-width:860px) {
+
+            .two,
+            .top {
+                grid-template-columns: 1fr !important
+            }
+        }
+
+        .card {
+            background: var(--sf);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            padding: 16px
+        }
+
+        .np {
+            padding: 0;
+            overflow: hidden
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            color: var(--mu);
+            font-weight: 700;
+            letter-spacing: .06em;
+            text-transform: uppercase
+        }
+
+        input,
+        select {
+            width: 100%;
+            margin-top: 5px;
+            background: var(--bg);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 11px 12px;
+            font: 600 15px Outfit, sans-serif
+        }
+
+        input[type=checkbox] {
+            width: auto;
+            margin-right: 7px
+        }
+
+        input[type=range] {
+            padding: 0;
+            accent-color: var(--ac)
+        }
+
+        input:focus,
+        select:focus,
+        button:focus-visible {
+            outline: 2px solid var(--ac);
+            outline-offset: 1px
+        }
+
+        button {
+            font: 700 12px Outfit, sans-serif;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 9px;
+            border: 1px solid var(--bd);
+            background: var(--s2);
+            color: var(--tx);
+            padding: 10px 14px
+        }
+
+        button.pri {
+            background: var(--ac);
+            border-color: var(--ac);
+            color: #04121a
+        }
+
+        button.gb {
+            background: var(--gr);
+            border-color: var(--gr);
+            color: #03140c
+        }
+
+        button.dg {
+            color: var(--bad);
+            border-color: color-mix(in srgb, var(--bad) 40%, transparent)
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center
+        }
+
+        .row.r {
+            justify-content: flex-end
+        }
+
+        .f2 {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1fr 1fr
+        }
+
+        .box {
+            border: 1px solid var(--bd);
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 12px
+        }
+
+        .mu {
+            color: var(--mu)
+        }
+
+        .sm {
+            font-size: 13px
+        }
+
+        .gr {
+            color: var(--gr)
+        }
+
+        .line {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 4px 0;
+            font-size: 14px
+        }
+
+        .top {
+            display: grid;
+            grid-template-columns: 1fr 1fr
+        }
+
+        .half {
+            padding: 22px 20px;
+            text-align: center
+        }
+
+        .half+.half {
+            border-left: 1px solid var(--bd);
+            background: color-mix(in srgb, var(--pu) 7%, transparent)
+        }
+
+        .lbl {
+            font-size: 11px;
+            letter-spacing: .18em;
+            font-weight: 700;
+            color: var(--ac)
+        }
+
+        .pu .lbl {
+            color: var(--pu)
+        }
+
+        .big {
+            font: 700 40px Outfit, sans-serif;
+            letter-spacing: -.02em;
+            margin: 8px 0 14px
+        }
+
+        .chip {
+            display: flex;
+            justify-content: space-between;
+            border: 1px solid var(--bd);
+            border-radius: 10px;
+            padding: 9px 12px;
+            margin-top: 8px;
+            font-size: 12px;
+            letter-spacing: .1em;
+            font-weight: 700;
+            color: var(--mu)
+        }
+
+        .chip.g {
+            border-color: color-mix(in srgb, var(--gr) 45%, transparent);
+            color: var(--gr);
+            background: color-mix(in srgb, var(--gr) 8%, transparent)
+        }
+
+        .chip b {
+            color: var(--tx);
+            font-size: 14px;
+            letter-spacing: 0
+        }
+
+        .chip.g b {
+            color: var(--gr)
+        }
+
+        .cmp {
+            width: 100%;
+            border-collapse: collapse;
+            border-top: 1px solid var(--bd)
+        }
+
+        .cmp th {
+            font-size: 10px;
+            letter-spacing: .14em;
+            color: var(--mu);
+            padding: 12px 20px
+        }
+
+        .cmp th+th,
+        .cmp td+td {
+            text-align: right
+        }
+
+        .cmp td {
+            padding: 12px 20px;
+            border-top: 1px solid var(--bd);
+            font-size: 14px
+        }
+
+        .cmp td:first-child {
+            font-family: Outfit;
+            font-weight: 600
+        }
+
+        .cmp i,
+        .dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 10px
+        }
+
+        .dot {
+            margin-right: 8px
+        }
+
+        .cmp .fin td {
+            background: var(--bg);
+            font-weight: 700;
+            font-family: Outfit
+        }
+
+        .cmp .fin td+td {
+            font-family: "JetBrains Mono"
+        }
+
+        .roi {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-top: 1px solid var(--bd);
+            border-left: 3px solid var(--ye);
+            background: color-mix(in srgb, var(--ye) 6%, transparent);
+            font-size: 12px;
+            letter-spacing: .06em
+        }
+
+        .rn {
+            font-size: 26px;
+            font-weight: 700
+        }
+
+        .rn small {
+            font-size: 11px;
+            color: var(--mu)
+        }
+
+        .act {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            border-top: 1px solid var(--bd)
+        }
+
+        .act button {
+            border: 0;
+            border-radius: 0;
+            background: none;
+            padding: 15px 6px;
+            border-left: 1px solid var(--bd)
+        }
+
+        .act button:first-child {
+            border-left: 0
+        }
+
+        .act .pri {
+            background: var(--ac)
+        }
+
+        .stk {
+            display: flex;
+            height: 12px;
+            border-radius: 7px;
+            overflow: hidden;
+            margin: 10px 0 12px
+        }
+
+        .ttl {
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .ic {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 22px;
+            border: 1px solid var(--bd);
+            background: var(--sf)
+        }
+
+        .hd {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--bd);
+            margin-bottom: 18px
+        }
+
+        .g3 {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            margin-bottom: 18px
+        }
+
+        .st {
+            padding: 18px
+        }
+
+        .st b {
+            display: block;
+            font-size: 26px
+        }
+
+        .st span {
+            font-size: 11px;
+            letter-spacing: .12em;
+            font-weight: 700
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            background: var(--s2);
+            border: 1px solid var(--bd)
+        }
+
+        .badge.low {
+            background: var(--bad);
+            color: #fff;
+            border-color: var(--bad)
+        }
+
+        .badge.pu {
+            color: var(--pu);
+            border-color: color-mix(in srgb, var(--pu) 45%, transparent)
+        }
+
+        .ph {
+            height: 200px;
+            background: var(--s2);
+            display: grid;
+            place-items: center;
+            color: var(--mu);
+            overflow: hidden
+        }
+
+        .ph img,
+        .pv img,
+        .cir img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        .cat {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))
+        }
+
+        .cat .card {
+            padding: 0;
+            overflow: hidden
+        }
+
+        .cat .b {
+            padding: 14px
+        }
+
+        .cir {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 3px solid var(--tx);
+            background: var(--s2);
+            overflow: hidden;
+            flex: none
+        }
+
+        .tag {
+            background: var(--s2);
+            border: 1px solid var(--bd);
+            border-radius: 6px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--mu)
+        }
+
+        .bar {
+            height: 7px;
+            border-radius: 5px;
+            background: var(--s2);
+            overflow: hidden;
+            margin: 6px 0 10px
+        }
+
+        .bar i {
+            display: block;
+            height: 100%;
+            background: var(--gr)
+        }
+
+        .bar.low i {
+            background: var(--bad)
+        }
+
+        .sub2 {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+            align-items: center
+        }
+
+        dialog {
+            background: var(--sf);
+            color: var(--tx);
+            border: 1px solid var(--bd);
+            border-radius: 14px;
+            width: min(480px, 94vw);
+            padding: 18px;
+            max-height: 92vh
+        }
+
+        dialog::backdrop {
+            background: #000a
+        }
+
+        dialog label {
+            margin-bottom: 10px
+        }
+
+        .pv {
+            height: 150px;
+            background: var(--s2);
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+            margin: 5px 0 6px;
+            color: var(--mu)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        .empty {
+            padding: 36px;
+            text-align: center;
+            color: var(--mu);
+            border: 1px dashed var(--bd);
+            border-radius: 14px
+        }
+
+        #toast {
+            position: fixed;
+            left: 50%;
+            bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+            transform: translateX(-50%);
+            background: var(--gr);
+            color: #03140c;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s;
+            z-index: 20
+        }
+
+        #toast.on {
+            opacity: 1
+        }
+
+        @media print {
+
+            header,
+            main,
+            #toast {
+                display: none
+            }
+
+            dialog {
+                border: 0;
+                box-shadow: none
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="login-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:360px;padding:24px;">
+    <h2 style="margin-bottom:16px;text-align:center;">Acesso Restrito</h2>
+    <label>E-mail<input type="email" id="login-email"></label>
+    <label style="margin-top:12px;">Senha<input type="password" id="login-pwd"></label>
+    <button class="pri" id="btn-login" style="width:100%;margin-top:20px;padding:14px;">Entrar</button>
+    <div id="login-err" style="color:var(--bad);margin-top:12px;font-size:12px;text-align:center;"></div>
+  </div>
+</div>
+    <header>
+        <div class="lg"><b>Calc3D</b><small>SLICER EDITION</small></div>
+        <button class="tab on" data-t="calc">Calc</button><button class="tab" data-t="hist">Histórico</button><button
+            class="tab" data-t="est">Estoque</button><button class="tab" data-t="set">Ajustes</button>
+        <span class="sp0"></span><span id="sy" data-a="sync" class="mu sm" style="white-space:nowrap;cursor:pointer"
+            title="Clique para atualizar da nuvem"></span><button id="th" title="Alternar tema">◐</button><select
+            id="cs" data-s="cur" style="width:auto;margin:0;padding:8px 10px">
+            <option>BRL</option>
+            <option>USD</option>
+            <option>EUR</option>
+        </select>
+    </header>
+    <main>
+        <section class="v on" id="v-calc"></section>
+        <section class="v" id="v-hist"></section>
+        <section class="v" id="v-est"></section>
+        <section class="v" id="v-set"></section>
+    </main>
+    <dialog id="dlg"></dialog>
+    <dialog id="cf"></dialog>
+    <div id="toast"></div>
+    <script>
+        const $ = s => document.querySelector(s), uid = () => Math.random().toString(36).slice(2, 9);
+        const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const D0 = { set: { kwh: .9, kg: 120, minP: 10, labor: 25, cur: 'BRL', usd: 5.5, eur: 6, theme: '' }, machines: [], spools: [], items: [], hist: [] };
+        let S; try { S = Object.assign({}, D0, JSON.parse(localStorage.getItem('z3c') || '{}')) } catch (e) { S = JSON.parse(JSON.stringify(D0)) }
+        S.set = Object.assign({}, D0.set, S.set);
+        const save = () => { let ok = true; try { localStorage.setItem('z3c', JSON.stringify(S)) } catch (e) { ok = !!COL; if (!ok) toast('Sem espaço no navegador. Exporte um backup ou use imagens menores.') } push(); return ok };
+        const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.k); toast.k = setTimeout(() => t.classList.remove('on'), 2400) };
+        const theme = () => { document.documentElement.dataset.theme = S.set.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'); $('#cs').value = S.set.cur };
+        let COL = null, snap = {}, ptm = 0, busy = false, dirty = false;
+        const KS = ['machines', 'spools', 'items', 'hist'];
+        const nrec = o => Object.keys(o).filter(k => k != 'settings').length, lrec = () => KS.reduce((a, k) => a + S[k].length, 0);
+        const badge = t => { const b = $('#sy'); if (b) b.textContent = t };
+        const ask = (m, cb) => { const d = $('#cf'); d.innerHTML = `<p style="margin:0 0 16px;font-size:16px">${esc(m)}</p><div class="row r"><button id="cn">Cancelar</button><button class="dg" id="ok2">Confirmar</button></div>`; $('#cn').onclick = () => d.close(); $('#ok2').onclick = () => { d.close(); cb() }; d.showModal() };
+        const shrink = u => new Promise(r => { const i = new Image(); i.onload = () => { const k = Math.min(1, 720 / Math.max(i.width, i.height)), c = document.createElement('canvas'); c.width = i.width * k; c.height = i.height * k; c.getContext('2d').drawImage(i, 0, 0, c.width, c.height); let q = .68, o = c.toDataURL('image/jpeg', q); while (o.length > 170000 && q > .3) { q -= .1; o = c.toDataURL('image/jpeg', q) } r(o) }; i.onerror = () => r(u); i.src = u });
+        function flat() { const o = { settings: Object.assign({ k: 'settings' }, S.set) }; KS.forEach(k => S[k].forEach((r, i) => { if (!r.ts) r.ts = Date.now() + i; o[k + '_' + r.id] = Object.assign({ k }, r) })); return o }
+        function push() { if (!COL) return; dirty = true; clearTimeout(ptm); ptm = setTimeout(run, 500) }
+        function adopt(o) {
+            const n = { set: Object.assign({}, D0.set, o.settings || {}), machines: [], spools: [], items: [], hist: [] }; delete n.set.k;
+            for (const id in o) { const r = Object.assign({}, o[id]), k = r.k; if (KS.includes(k)) { delete r.k; n[k].push(r) } }
+            KS.forEach(k => n[k].sort((a, b) => (a.ts || 0) - (b.ts || 0))); S = n; snap = {}; const f = flat(); for (const k in f) snap[k] = JSON.stringify(f[k]); theme()
+        }
+        const rate = () => ({ BRL: 1, USD: 1 / S.set.usd, EUR: 1 / S.set.eur }[S.set.cur] || 1);
+        const R = v => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: S.set.cur }).format((v || 0) * rate());
+        const N = (v, d = 0) => (+v || 0).toLocaleString('pt-BR', { maximumFractionDigits: d });
+        let tab = 'calc', sub = 'sp';
+        const C0 = () => ({ name: '', qty: 1, w: 0, t: 0, mid: '', sid: '', kg: null, multi: false, w2: 0, kg2: 0, fin: 0, oth: 0, pack: 0, fail: 0, img: '', editId: null, prof: 50, round: false, ded: true });
+        let C = C0();
+        function calc() {
+            const m = S.machines.find(x => x.id == C.mid) || { watts: 0, price: 0, life: 1, maint: 0 }, sp = S.spools.find(x => x.id == C.sid);
+            const kg = sp ? sp.price / Math.max(sp.init, 1) * 1000 : (C.kg ?? S.set.kg), t = C.t;
+            const mat = C.w / 1000 * kg + (C.multi ? C.w2 / 1000 * C.kg2 : 0), en = m.watts / 1000 * t * S.set.kwh, dep = m.price / Math.max(m.life, 1) * t, mn = m.maint * t, lab = C.fin * S.set.labor;
+            const q = Math.max(C.qty, 1), f = C.fail || 0, prod = mat + en + dep + mn, fx = lab + C.oth + C.pack, u = prod + fx, lossC = prod * f / q, cost = prod + lossC + fx;
+            let profit = Math.max(cost * C.prof / 100, S.set.minP), tot = cost + profit;
+            if (C.round) { tot = Math.ceil(tot * rate()) / rate(); profit = tot - cost }
+            return { mat, en, dep, mn, lab, u, loss: lossC, cost, cu: cost / q, profit, tot, unit: tot / q, roi: m.price > 0 && profit > 0 ? Math.ceil(m.price / (profit / q)) : 0, m, sp }
+        }
+        const fld = (k, l, s = 'any', ex = '') => `<label>${l}<input type="number" step="${s}" data-k="${k}" value="${C[k] ?? ''}" ${ex}></label>`;
+        function renderCalc() {
+            const mo = `<option value="">Sem perfil</option>` + S.machines.map(m => `<option value="${m.id}" ${m.id == C.mid ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
+            const so = `<option value="">Manual (custo do kg)</option>` + S.spools.map(s => `<option value="${s.id}" ${s.id == C.sid ? 'selected' : ''}>${esc(s.brand)} ${s.mat} ${esc(s.color)} · ${N(s.cur)}g</option>`).join('');
+            $('#v-calc').innerHTML = `<div class="two"><div class="card"><div class="row" style="justify-content:space-between;margin-bottom:14px"><b style="letter-spacing:.1em;font-size:13px">${C.editId ? 'EDITANDO PROJETO SALVO' : 'PARÂMETROS'}</b><button class="dg" data-a="reset" title="Limpar">Limpar</button></div>
+<div class="f2" style="grid-template-columns:2fr 1fr"><label>Nome do projeto<input data-k="name" value="${esc(C.name)}"></label>${fld('qty', 'Qtd', '1')}</div>
+<label style="margin-top:12px">Foto do projeto<div class="pv" id="cpv">${C.img ? `<img src="${C.img}" alt="">` : 'Sem imagem'}</div><input type="file" accept="image/*" id="cfi"></label>
+<div class="box"><div class="f2">${fld('w', 'Peso total do projeto (g)')}${fld('t', 'Tempo total (h)')}</div></div>
+<div class="f2" style="margin-top:12px"><label>Impressora<select data-k="mid">${mo}</select></label><label>Filamento (estoque)<select data-k="sid">${so}</select></label></div>
+<div style="margin-top:12px">${fld('kg', 'Custo do kg (se manual)', 'any', `placeholder="${S.set.kg}"`)}</div>
+<label style="margin-top:14px"><input type="checkbox" data-k="multi" ${C.multi ? 'checked' : ''}>Multi-material (AMS/MMU)</label>
+${C.multi ? `<div class="f2" style="margin-top:8px">${fld('w2', 'Peso 2 (g)')}${fld('kg2', 'Custo 2 (kg)')}</div>` : ''}
+<h3>Pós-processamento</h3>${fld('fin', 'Tempo de acabamento total (h)')}
+<h3>Extras</h3><div class="f2">${fld('oth', 'Outros (R$ total)')}${fld('pack', 'Embalagem (R$ total)')}</div>
+<h3>Falhas</h3>${fld('fail', 'Peças com falha (ex.: 5 de 20)', '1')}
+<h3>Lucro desejado: <span id="pl">${C.prof}</span>%</h3><input type="range" min="0" max="250" data-k="prof" value="${Math.min(C.prof, 250)}">
+<label style="margin-top:8px">Ou digite qualquer valor (%)<input type="number" data-k="prof" value="${C.prof}"></label>
+<div style="margin-top:12px"><label><input type="checkbox" data-k="round" ${C.round ? 'checked' : ''}>Arredondar preço</label><label style="margin-top:8px"><input type="checkbox" data-k="ded" ${C.ded ? 'checked' : ''}>Baixar filamento do estoque ao salvar</label></div></div>
+<div><div class="card np" id="res"></div><div class="card" id="viz" style="margin-top:16px"></div></div></div>`;
+            const ci = $('#cfi'); if (ci) ci.onchange = () => ci.files[0] && rz(ci.files[0], u => { C.img = u; $('#cpv').innerHTML = `<img src="${u}" alt="">` }); res()
+        }
+        function rows(c) { const q = Math.max(C.qty, 1); return [['Filamento', '#4f7cff', c.mat], ['Energia', '#f5b82e', c.en], ['Desgaste', '#c13fe6', c.dep + c.mn], ['Falhas', '#f0524f', c.loss], ['Mão de obra', '#3dbb83', c.lab], ['Extras', '#7d8db0', C.oth + C.pack]] }
+        function res() {
+            const c = calc(), q = Math.max(C.qty, 1), r = rows(c);
+            $('#res').innerHTML = `<div class="top"><div class="half"><div class="lbl">PROJETO TOTAL</div><div class="big">${R(c.tot)}</div><div class="chip g"><span>LUCRO</span><b>${R(c.profit)}</b></div><div class="chip"><span>CUSTO</span><b>${R(c.cost)}</b></div></div>
+<div class="half pu"><div class="lbl">POR UNIDADE · ÷ ${N(C.qty)}</div><div class="big">${R(c.unit)}</div><div class="chip g"><span>LUCRO</span><b>${R(c.profit / q)}</b></div><div class="chip"><span>CUSTO</span><b>${R(c.cu)}</b></div></div></div>
+<table class="cmp"><tr><th style="text-align:left">COMPOSIÇÃO</th><th>TOTAL</th><th>UNITÁRIO</th></tr>${r.map(x => `<tr><td><i style="background:${x[1]}"></i>${x[0]}</td><td>${R(x[2])}</td><td class="mu">${R(x[2] / q)}</td></tr>`).join('')}<tr class="fin"><td>CUSTO FINAL</td><td>${R(c.cost)}</td><td class="mu">${R(c.cu)}</td></tr></table>
+<div class="roi"><div><b>ROI (PAYBACK)</b><div class="mu sm" style="letter-spacing:0">${c.roi ? 'Pague a impressora vendendo:' : 'Escolha uma impressora com preço.'}</div></div><div class="rn">${c.roi ? N(c.roi) : '—'} <small>UNID.</small></div></div>
+<div class="act"><button data-a="savep">Salvar</button><button data-a="csvp">CSV</button><button data-a="copyq">Copiar</button><button data-a="waq">Enviar</button><button class="pri" data-a="quoteb">Orçamento</button></div>`;
+            const tt = c.cost || 1; $('#viz').innerHTML = `<h3 style="margin-top:0">DETALHAMENTO VISUAL</h3><div class="stk">${r.map(x => `<i style="flex:${Math.max(x[2], 0)};background:${x[1]}"></i>`).join('')}</div>${r.map(x => `<div class="line"><span><i class="dot" style="background:${x[1]}"></i>${x[0]}</span><b>${N(x[2] / tt * 100, 1)}%</b></div>`).join('')}`
+        }
+        const quote = () => { const c = calc(); return `*ORÇAMENTO*\n${C.name || 'Projeto'}\nQtd: ${C.qty} · Unitário: ${R(c.unit)}\nTOTAL: ${R(c.tot)}\nVálido por 7 dias. Sujeito a alteração conforme disponibilidade de material.` };
+
+        function renderHist() {
+            const h = S.hist, fat = h.reduce((a, x) => a + x.tot, 0), lu = h.reduce((a, x) => a + x.profit, 0);
+            $('#v-hist').innerHTML = `<div class="hd"><div class="ttl"><span class="ic" style="color:var(--pu)">⟲</span><h2>Histórico</h2></div><div class="row"><button class="dg" data-a="clearh">Limpar tudo</button><button data-a="csv">Exportar CSV</button><span class="badge pu">${h.length} PROJETOS</span></div></div>
+<div class="g3"><div class="card st"><span class="gr">FATURAMENTO TOTAL</span><b>${R(fat)}</b></div><div class="card st"><span style="color:var(--ac)">LUCRO ESTIMADO</span><b>${R(lu)}</b></div><div class="card st"><span style="color:var(--pu)">PROJETOS SALVOS</span><b>${h.length}</b></div></div>
+${h.length ? `<div class="cat">${h.slice().reverse().map(x => `<div class="card"><div class="ph" style="height:230px;cursor:pointer" data-a="viewh" data-id="${x.id}">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font-family:Rajdhani;font-size:19px;text-transform:uppercase">${esc(x.name)}</b><span class="badge">${x.qty} UN</span></div><div class="mu sm">${x.d}</div><div class="line"><span class="mu">Custo/un</span><b>${R(x.cu ?? x.cost / Math.max(x.qty, 1))}</b></div><div class="line"><span class="mu">Venda/un</span><b class="gr">${R(x.up ?? x.tot / Math.max(x.qty, 1))}</b></div><div class="row" style="margin-top:10px"><button class="pri" data-a="viewh" data-id="${x.id}">Ver tudo</button>${x.c ? `<button data-a="edh" data-id="${x.id}">Editar</button>` : ''}<button class="gb" data-a="tocat" data-id="${x.id}">${S.items.some(i => i.hid == x.id) ? 'No catálogo ✓' : 'Enviar ao catálogo'}</button><button class="dg" data-a="delh" data-id="${x.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Nenhum projeto salvo.<br><br><button class="pri" data-a="go" data-id="calc">Criar novo orçamento</button></div>`}`
+        }
+
+        function renderEst() {
+            const sp = sub == 'sp'; let body = '';
+            if (sp) body = S.spools.length ? `<div class="cat">${S.spools.map(s => { const p = Math.min(100, s.cur / Math.max(s.init, 1) * 100), low = p < 20; return `<div class="card" style="padding:16px"><div class="row" style="flex-wrap:nowrap;margin-bottom:14px"><div class="cir">${s.img ? `<img src="${s.img}" alt="">` : ''}</div><div><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(s.brand)}</b><div><span class="tag">${s.mat}</span> <span class="mu sm">${esc(s.color)}</span></div></div></div><div class="line mu" style="font-size:11px;letter-spacing:.08em"><span>DISPONÍVEL</span><span><b style="color:var(--tx)">${N(s.cur)}G</b> / ${N(s.init)}G</span></div><div class="bar ${low ? 'low' : ''}"><i style="width:${p}%"></i></div><div class="line" style="border-top:1px solid var(--bd);padding-top:10px"><span class="mu">Custo/Kg</span><b class="gr">${R(s.price / Math.max(s.init, 1) * 1000)}</b></div><div class="row" style="margin-top:8px"><button data-a="edsp" data-id="${s.id}">Editar</button><button class="dg" data-a="delsp" data-id="${s.id}">Excluir</button>${low ? '<span class="badge low">ACABANDO</span>' : ''}</div></div>` }).join('')}</div>` : `<div class="empty">Seu estoque está vazio.<br><br><button class="pri" data-a="newsp">Adicionar primeiro carretel</button></div>`;
+            else body = S.items.length ? `<div class="cat">${S.items.map(i => `<div class="card"><div class="ph" style="height:250px">${i.img ? `<img src="${i.img}" alt="">` : 'Sem imagem'}</div><div class="b"><div class="line"><b style="font:700 19px Rajdhani;text-transform:uppercase">${esc(i.name)}</b><span class="badge ${i.qty < 1 ? 'low' : ''}">${N(i.qty)} EM ESTOQUE</span></div><div class="mu sm">${esc(i.desc)}</div><div class="mu sm">${N(i.w, 1)}g · ${N(i.t, 2)}h por un.</div>${i.cost ? `<div class="line"><span class="mu">Custo/un</span><b>${R(i.cost)}</b></div>` : ''}<div class="line"><span class="mu">Venda/un</span><b class="gr">${R(i.price)}</b></div><div class="row"><button class="pri" data-a="useit" data-id="${i.id}">Usar na calculadora</button><button data-a="qm" data-id="${i.id}">−1</button><button data-a="qp" data-id="${i.id}">+1</button></div><div class="row" style="margin-top:6px"><button data-a="edit" data-id="${i.id}">Editar</button><button class="dg" data-a="delit" data-id="${i.id}">Excluir</button></div></div></div>`).join('')}</div>` : `<div class="empty">Seu catálogo está vazio. Envie projetos do Histórico ou cadastre uma peça.<br><br><button class="pri" data-a="newit">Cadastrar primeira peça</button></div>`;
+            $('#v-est').innerHTML = `<div class="hd"><div class="ttl"><span class="ic" style="color:var(--gr)">▣</span><div><h2>Gestão de estoque</h2><div class="mu sm">Gerencie seus filamentos e organize suas peças como um catálogo.</div></div></div><button class="gb" data-a="${sp ? 'newsp' : 'newit'}">+ ${sp ? 'Novo carretel' : 'Nova peça'}</button></div>
+<div class="sub2"><button class="tab ${sp ? 'on' : ''}" data-a="sub" data-id="sp">Filamentos</button><button class="tab ${!sp ? 'on' : ''}" data-a="sub" data-id="it">Catálogo de peças</button></div>${body}`
+        }
+
+        function renderSet() {
+            const s = S.set;
+            $('#v-set').innerHTML = `<div class="hd"><div class="ttl"><span class="ic">⚙</span><div><h2>Ajustes</h2><div class="mu sm">Defina os parâmetros da sua farm de impressão.</div></div></div></div>
+<div class="row" style="margin-bottom:8px"><h3 style="margin:0;flex:1">Perfis de máquina</h3><button class="pri" data-a="newmc">Nova impressora</button></div>
+${S.machines.length ? `<div class="cat">${S.machines.map(m => `<div class="card" style="padding:16px"><b style="font:700 20px Rajdhani;text-transform:uppercase">${esc(m.name)}</b><div class="mu sm">${N(m.watts)}W · ${R(m.price)} · vida útil ${N(m.life)}h</div><div class="mu sm">Depreciação ${R(m.price / Math.max(m.life, 1))}/h · Manutenção ${R(m.maint)}/h</div><div class="row" style="margin-top:10px"><button data-a="edmc" data-id="${m.id}">Editar</button><button data-a="dupmc" data-id="${m.id}">Duplicar</button><button class="dg" data-a="delmc" data-id="${m.id}">Excluir</button></div></div>`).join('')}</div>` : `<div class="empty">Nenhuma impressora cadastrada. Cada perfil fica salvo e aparece na calculadora.</div>`}
+<h3>Parâmetros de negócio</h3><div class="card"><div class="f2">
+<label>Custo energia (R$/kWh)<input type="number" step="any" data-s="kwh" value="${s.kwh}"></label><label>Custo kg padrão (R$)<input type="number" step="any" data-s="kg" value="${s.kg}"></label>
+<label>Lucro mínimo por projeto (R$)<input type="number" step="any" data-s="minP" value="${s.minP}"></label><label>Mão de obra (R$/h)<input type="number" step="any" data-s="labor" value="${s.labor}"></label>
+<label>1 USD = R$<input type="number" step="any" data-s="usd" value="${s.usd}"></label><label>1 EUR = R$<input type="number" step="any" data-s="eur" value="${s.eur}"></label></div>
+<div class="mu sm" style="margin-top:8px">A moeda de exibição fica no topo. As cotações são manuais: esta versão não consulta câmbio online.</div></div>
+<h3>Segurança de dados</h3><div class="card row"><button data-a="bk">Baixar backup</button><label style="margin:0"><span class="mu sm">Restaurar (substitui os dados atuais)</span><input type="file" accept=".json" id="rs"></label></div>`}
+        const render = () => ({ calc: renderCalc, hist: renderHist, est: renderEst, set: renderSet }[tab])();
+        function go(t) { tab = t; document.querySelectorAll('.v').forEach(e => e.classList.toggle('on', e.id == 'v-' + t)); document.querySelectorAll('header .tab').forEach(e => e.classList.toggle('on', e.dataset.t == t)); render() }
+
+        let imgs = {};
+        function rz(f, cb) { const r = new FileReader(); r.onload = () => shrink(r.result).then(cb); r.readAsDataURL(f) }
+        function form(title, fs, v, ok) {
+            const d = $('#dlg'); imgs = { img: v.img || '' };
+            d.innerHTML = `<div><h3 style="margin-top:0;color:var(--tx);font-size:16px">${title}</h3>${fs.map(f => `<label>${f[1]}${f[2] == 'img' ? `<div class="pv" id="pv">${v.img ? `<img src="${v.img}" alt="">` : 'Sem imagem'}</div><input type="file" accept="image/*" id="fi">` : f[2] == 'sel' ? `<select name="${f[0]}">${f[3].map(o => `<option value="${o[0]}" ${v[f[0]] == o[0] ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select>` : `<input name="${f[0]}" type="${f[2]}" step="any" value="${esc(v[f[0]] ?? '')}">`}</label>`).join('')}<div class="row r"><button type="button" id="cx">Cancelar</button><button type="button" class="pri" id="sv">Salvar</button></div></div>`;
+            const fi = $('#fi'); if (fi) fi.onchange = () => fi.files[0] && rz(fi.files[0], u => { imgs.img = u; $('#pv').innerHTML = `<img src="${u}" alt="">` });
+            $('#cx').onclick = () => d.close(); $('#sv').onclick = e => { const o = {}; fs.forEach(f => { if (f[2] == 'img') o.img = imgs.img; else { const x = d.querySelector(`[name=${f[0]}]`).value; o[f[0]] = f[2] == 'number' ? +x || 0 : x } }); ok(o); d.close() }; d.showModal()
+        }
+        const mOpts = () => [['', 'Sem perfil']].concat(S.machines.map(m => [m.id, m.name])), sOpts = () => [['', 'Manual']].concat(S.spools.map(s => [s.id, `${s.brand} ${s.mat} ${s.color}`]));
+        const MF = [['name', 'Nome (ex.: Bambu X1C)', 'text'], ['watts', 'Consumo (W)', 'number'], ['price', 'Preço da máquina (R$)', 'number'], ['life', 'Vida útil (h)', 'number'], ['maint', 'Manutenção (R$/h)', 'number']];
+        const SF = [['img', 'Foto do carretel', 'img'], ['brand', 'Marca', 'text'], ['mat', 'Material', 'sel', ['PLA', 'PETG', 'ABS', 'TPU', 'ASA', 'Resina'].map(x => [x, x])], ['color', 'Cor / descrição', 'text'], ['init', 'Peso inicial (g)', 'number'], ['cur', 'Peso atual (g)', 'number'], ['price', 'Preço pago (R$)', 'number']];
+        const IF = () => [['img', 'Foto da peça', 'img'], ['name', 'Nome', 'text'], ['desc', 'Descrição', 'text'], ['w', 'Peso por unidade (g)', 'number'], ['t', 'Tempo por unidade (h)', 'number'], ['mid', 'Impressora', 'sel', mOpts()], ['sid', 'Filamento', 'sel', sOpts()], ['cost', 'Custo por unidade (R$)', 'number'], ['price', 'Preço de venda (R$)', 'number'], ['qty', 'Unidades em estoque', 'number']];
+        const dl = (n, t, m) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: m })); a.download = n; a.click() };
+        const by = (a, id) => S[a].find(x => x.id == id);
+
+        document.addEventListener('input', e => {
+            const t = e.target;
+            if (t.dataset.k && tab == 'calc') {
+                const k = t.dataset.k;
+                if (t.type == 'checkbox') C[k] = t.checked; else if (t.type == 'number' || t.type == 'range') C[k] = t.value === '' ? (k == 'kg' ? null : 0) : +t.value; else C[k] = t.value;
+                if (k == 'prof') { $('#pl').textContent = C.prof; document.querySelectorAll('[data-k=prof]').forEach(x => { if (x !== t) x.value = C.prof }) }
+                if (k == 'multi') return renderCalc(); res()
+            }
+            if (t.dataset.s && t.tagName != 'SELECT') { S.set[t.dataset.s] = +t.value || 0; save() }
+        });
+        document.addEventListener('change', e => {
+            const t = e.target;
+            if (t.dataset.k && t.tagName == 'SELECT') { C[t.dataset.k] = t.value; res() }
+            if (t.dataset.s == 'cur') { S.set.cur = t.value; save(); render() }
+            if (t.id == 'rs' && t.files[0]) { const r = new FileReader(); r.onload = () => { try { const o = JSON.parse(r.result); ask('Substituir todos os dados atuais?', () => { S = Object.assign({}, D0, o); S.set = Object.assign({}, D0.set, S.set); save(); theme(); render() }) } catch (x) { toast('Arquivo de backup inválido.') } }; r.readAsText(t.files[0]) }
+        });
+        document.addEventListener('click', e => {
+            const b = e.target.closest('button,[data-a]'); if (!b) return;
+            if (b.id == 'th') { const cur = document.documentElement.dataset.theme; S.set.theme = cur == 'light' ? 'dark' : 'light'; save(); return theme() }
+            if (b.dataset.t) return go(b.dataset.t);
+            const a = b.dataset.a, id = b.dataset.id; if (!a) return;
+            const A = {
+                go: () => go(id), sync: () => { if (!COL) return toast('Sincronização indisponível nesta página.'); pull().then(o => { if (Object.keys(o).length && (nrec(o) || !lrec())) { adopt(o); render(); toast('Dados atualizados da nuvem.') } }).catch(() => toast('Não foi possível atualizar.')) }, sub: () => { sub = id; renderEst() }, reset: () => { C = C0(); renderCalc() },
+                savep: () => {
+                    const c = calc();
+                    const h = { id: C.editId || uid(), d: new Date().toLocaleDateString('pt-BR'), name: C.name || 'Projeto', qty: C.qty, tot: c.tot, profit: c.profit, cost: c.cost, cu: c.cu, up: c.unit, img: C.img, mn: c.m.name || '', sn: c.sp ? `${c.sp.brand} ${c.sp.mat} ${c.sp.color}` : 'Manual', b: { mat: c.mat, en: c.en, dep: c.dep, mnt: c.mn, lab: c.lab, loss: c.loss }, c: Object.assign({}, C, { img: '', editId: null }) }, wasEdit = !!C.editId, ix = S.hist.findIndex(x => x.id == C.editId);
+                    if (ix >= 0) S.hist[ix] = h; else S.hist.push(h);
+                    if (C.ded && c.sp && !wasEdit) c.sp.cur = Math.max(0, c.sp.cur - C.w * (1 + (C.fail || 0) / Math.max(C.qty, 1)));
+                    if (save()) { C = C0(); go('hist'); toast(wasEdit ? 'Projeto atualizado.' : 'Projeto salvo no histórico.') }
+                },
+                csvp: () => { const c = calc(); dl('projeto.csv', 'Projeto;Qtd;Custo total;Lucro;Total;Custo/un;Venda/un\n' + [C.name || 'Projeto', C.qty, c.cost.toFixed(2), c.profit.toFixed(2), c.tot.toFixed(2), c.cu.toFixed(2), c.unit.toFixed(2)].join(';'), 'text/csv') },
+                copyq: () => { const t = quote(), fb = () => { const d = $('#cf'); d.innerHTML = `<p style="margin:0 0 10px">Copie o texto abaixo:</p><textarea readonly rows="6" style="width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px">${esc(t)}</textarea><div class="row r" style="margin-top:12px"><button id="cn">Fechar</button></div>`; $('#cn').onclick = () => d.close(); d.showModal(); d.querySelector('textarea').select() }; try { navigator.clipboard.writeText(t).then(() => toast('Orçamento copiado.'), fb) } catch (x) { fb() } },
+                waq: () => window.open('https://wa.me/?text=' + encodeURIComponent(quote()), '_blank'),
+                quoteb: () => { const c = calc(), d = $('#dlg'); d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:20px">ORÇAMENTO</h3><div class="mu sm">Data: ${new Date().toLocaleDateString('pt-BR')}</div><h3>Detalhamento do projeto</h3><table><tr class="mu sm"><td>Item</td><td>Qtd</td><td>Unitário</td><td>Total</td></tr><tr><td>${esc(C.name || 'Projeto')}<div class="mu sm">Material: ${c.sp ? c.sp.mat : '—'} · Tempo: ${N(C.t, 1)}h · Peso: ${N(C.w)}g</div></td><td>${N(C.qty)}</td><td>${R(c.unit)}</td><td>${R(c.tot)}</td></tr></table><div class="line" style="margin-top:12px;font-size:18px"><b>TOTAL</b><b>${R(c.tot)}</b></div><div class="mu sm">Orçamento válido por 7 dias. Sujeito a alteração conforme disponibilidade de material.</div><div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="pri" id="pr">Imprimir</button></div>`; $('#cl').onclick = () => d.close(); $('#pr').onclick = () => window.print(); d.showModal() },
+                csv: () => dl('historico.csv', 'Data;Projeto;Qtd;Total;Lucro\n' + S.hist.map(x => [x.d, x.name, x.qty, x.tot.toFixed(2), x.profit.toFixed(2)].join(';')).join('\n'), 'text/csv'),
+                clearh: () => ask('Apagar todo o histórico?', () => { S.hist = []; save(); renderHist() }),
+                delh: () => ask('Excluir este projeto do histórico?', () => { S.hist = S.hist.filter(x => x.id != id); save(); renderHist() }),
+                edh: () => { const x = by('hist', id); C = Object.assign(C0(), x.c, { img: x.img || '', editId: x.id }); go('calc') },
+                tocat: () => {
+                    const x = by('hist', id), c = x.c || {}, q = Math.max(x.qty, 1), it = S.items.find(i => i.hid == x.id), o = { name: x.name, w: (c.w || 0) / q, t: (c.t || 0) / q, mid: c.mid || '', sid: c.sid || '', price: x.up ?? x.tot / q, cost: x.cu ?? x.cost / q, img: x.img || '', hid: x.id };
+                    if (it) Object.assign(it, o); else S.items.push(Object.assign({ id: uid(), desc: '', qty: 0 }, o));
+                    if (save()) { toast(it ? 'Peça atualizada no catálogo.' : 'Enviado ao catálogo de peças.'); if ($('#dlg').open) $('#dlg').close(); renderHist() }
+                },
+                viewh: () => {
+                    const x = by('hist', id), b = x.b || {}, d = $('#dlg'), q = Math.max(x.qty, 1), l = (a, v) => `<div class="line"><span>${a}</span><span>${v}</span></div>`;
+                    d.innerHTML = `<h3 style="margin-top:0;color:var(--tx);font-size:18px">${esc(x.name)}</h3><div class="pv" style="height:260px">${x.img ? `<img src="${x.img}" alt="">` : 'Sem imagem'}</div>${l('Data', x.d)}${l('Quantidade', x.qty + ' peças')}${x.mn !== undefined ? l('Impressora', esc(x.mn || 'Sem perfil')) + l('Filamento', esc(x.sn || 'Manual')) : ''}${x.c ? l('Peso / tempo do projeto', N(x.c.w) + 'g · ' + N(x.c.t, 1) + 'h') + l('Peças com falha', N(x.c.fail || 0)) + l('Lucro desejado', N(x.c.prof) + '%') : ''}<h3>Custo do projeto</h3>${b.mat !== undefined ? l('Material', R(b.mat)) + l('Energia', R(b.en)) + l('Depreciação', R(b.dep)) + l('Manutenção', R(b.mnt)) + l('Mão de obra', R(b.lab)) + l('Perda por falhas', R(b.loss)) : ''}${l('Custo total', R(x.cost))}${l('Custo por unidade', R(x.cu ?? x.cost / q))}<h3>Venda</h3>${l('Total do projeto', R(x.tot))}${l('Lucro', R(x.profit))}${l('Venda por unidade', '<b class="gr">' + R(x.up ?? x.tot / q) + '</b>')}<div class="row r" style="margin-top:14px"><button id="cl">Fechar</button><button class="gb" id="tc">Enviar ao catálogo</button>${x.c ? '<button class="pri" id="ed2">Editar</button>' : ''}</div>`;
+                    $('#cl').onclick = () => d.close(); $('#tc').onclick = () => A.tocat(); const e2 = $('#ed2'); if (e2) e2.onclick = () => { d.close(); A.edh() }; d.showModal()
+                },
+                newsp: () => form('Novo carretel', SF, { mat: 'PLA' }, o => { S.spools.push(Object.assign({ id: uid() }, o)); save(); renderEst() }),
+                edsp: () => form('Editar carretel', SF, by('spools', id), o => { Object.assign(by('spools', id), o); save(); renderEst() }),
+                delsp: () => ask('Excluir este carretel?', () => { S.spools = S.spools.filter(x => x.id != id); save(); renderEst() }),
+                newit: () => form('Nova peça', IF(), { qty: 0 }, o => { S.items.push(Object.assign({ id: uid() }, o)); save(); renderEst() }),
+                edit: () => form('Editar peça', IF(), by('items', id), o => { Object.assign(by('items', id), o); save(); renderEst() }),
+                delit: () => ask('Excluir esta peça do catálogo?', () => { S.items = S.items.filter(x => x.id != id); save(); renderEst() }),
+                qm: () => { const i = by('items', id); i.qty = Math.max(0, i.qty - 1); save(); renderEst() }, qp: () => { by('items', id).qty++; save(); renderEst() },
+                useit: () => { const i = by('items', id); C = Object.assign(C0(), { name: i.name, w: i.w, t: i.t, mid: i.mid, sid: i.sid, img: i.img || '' }); go('calc') },
+                newmc: () => form('Nova impressora', MF, {}, o => { S.machines.push(Object.assign({ id: uid() }, o)); save(); renderSet() }),
+                edmc: () => form('Editar impressora', MF, by('machines', id), o => { Object.assign(by('machines', id), o); save(); renderSet() }),
+                dupmc: () => { const m = by('machines', id); S.machines.push(Object.assign({}, m, { id: uid(), name: m.name + ' (cópia)' })); save(); renderSet() },
+                delmc: () => ask('Excluir este perfil de impressora?', () => { S.machines = S.machines.filter(x => x.id != id); save(); renderSet() }),
+                bk: () => dl('calc3d-backup.json', JSON.stringify(S), 'application/json')
+            };
+            A[a] && A[a]();
+        });
+        
+        // === CÓDIGO DE CONEXÃO E LOGIN (SUPABASE) ===
+        try {
+            const supabase = window.supabase.createClient(
+              'https://ucjemvzcbnbcqoshqnpr.supabase.co', 
+              'sb_publishable_0pvUyBZ4r6PIZXtoOirl7A_MR7Ofe6W' 
+            );
+
+            async function pullData() {
+              const { data, error } = await supabase.from('calc_dados').select('payload').eq('id', 'farm_data').single();
+              if (data && data.payload) {
+                 S = Object.assign({}, D0, data.payload);
+                 S.set = Object.assign({}, D0.set, S.set);
+                 render();
+                 theme();
+              }
+            }
+
+            async function run() {
+              if (busy) { ptm = setTimeout(run, 500); return; }
+              busy = true;
+              badge('☁ Salvando…');
+              try {
+                for(const k of ['spools','items','hist'])
+                  for(const x of S[k])
+                    if((x.img||'').length > 200000) x.img = await shrink(x.img);
+                    
+                const { error } = await supabase.from('calc_dados').upsert({ id: 'farm_data', payload: S });
+                if (error) throw error;
+                dirty = false;
+                badge('☁ Sincronizado');
+              } catch(e) {
+                badge('⚠ Erro ao sincronizar');
+                console.error("Erro no Run:", e);
+              }
+              busy = false;
+            }
+
+            async function initSyncReal() {
+              badge('Conectando ao banco…');
+              await pullData();
+              badge('☁ Sincronizado');
+            }
+
+            async function checkLogin() {
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                  document.getElementById('login-screen').style.display = 'none';
+                  initSyncReal();
+                }
+              } catch(err) {
+                 console.error("Erro de sessão:", err);
+              }
+            }
+
+            // Ação do Botão Blindada
+            const btnLogin = document.getElementById('btn-login');
+            const errDiv = document.getElementById('login-err');
+            
+            btnLogin.onclick = async () => {
+              try {
+                btnLogin.textContent = 'Carregando...';
+                errDiv.textContent = '';
+                
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-pwd').value;
+                
+                if (!email || !password) {
+                  errDiv.textContent = 'Preencha os dois campos.';
+                  btnLogin.textContent = 'Entrar';
+                  return;
+                }
+
+                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+                if (error) {
+                  errDiv.textContent = 'Erro Supabase: ' + error.message;
+                  btnLogin.textContent = 'Entrar';
+                } else {
+                  document.getElementById('login-screen').style.display = 'none';
+                  initSyncReal();
+                }
+              } catch (fatal) {
+                errDiv.textContent = 'Erro Fatal JS: ' + fatal.message;
+                btnLogin.textContent = 'Entrar';
+              }
+            };
+
+            checkLogin();
+        } catch (geral) {
+            alert("Erro catastrófico ao carregar biblioteca: " + geral.message);
+        }
+
+        // Renderiza a interface por baixo da tela preta
+        theme(); 
+        render();
+    </script>
+</body>
+</html>
